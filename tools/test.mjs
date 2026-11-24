@@ -1,0 +1,13 @@
+import assert from 'node:assert';import{findTimes,fmt,has,splitSteps,fromMeal,fromWiki,rank}from'../public/lib.js';
+let bad=0;const ck=(a,b,m)=>{try{assert.deepEqual(a,b)}catch{bad++;console.log('FAIL',m,JSON.stringify(a),'want',JSON.stringify(b))}};
+const T=(s,...x)=>ck(findTimes(s).map(t=>t.max?[t.seconds,t.max]:t.seconds),x,s);
+T('Cook 25 to 30 minutes',[1500,1800]);T('Simmer for 1 hour 30 minutes.',5400);T('Bake 1½ hours',5400);T('1 1/2 hours',5400);T('10-12 mins, then rest 30 seconds',[600,720],30);T('Leave half an hour',1800);T('an hour',3600);T('1 hour and 15 mins',4500);T('a minute',60);T('Add 2 eggs at 180C');T('for two to three minutes',[120,180]);T('one and a half hours',5400);T('a 10-minute rest',600);T('heat to 350 degrees');T('about 5 more minutes',300);T('1/2 hour',1800);T('boil 5 minutes, 2 minutes each side',300,120);T('1 minute and 30 seconds',90);
+ck(fmt(5400),'1 hr 30 min','fmt');
+for(const[l,f,e]of[['2 large eggs','eggs',1],['Aubergine','eggplant',1],['Peanut Butter','butter',0],['Egg Plants','eggs',0],['Chopped Tomatoes','tomato',1],['Grapes','rice',0],['Spring Onions','onion',0],['Spring Onions','spring onions',1],['Chicken Stock','chicken breast',0],['Courgettes','zucchini',1],['Potatoes','potato',1],['Chicken Breasts','chicken breast',1],['Prawns','shrimp',1],['Red Pepper','red bell pepper',1],['Chicken Breasts','chicken',1]])ck(has(l,f),!!e,l+'/'+f);
+ck(splitSteps('STEP 1\r\nChop.\r\nSTEP 2\r\nFry 2.5 mins.'),['Chop.','Fry 2.5 mins.'],'steps');
+const long='Heat it to 1.5 cups of water and then stir slowly until thick. '.repeat(8);ck(splitSteps(long).join('').replace(/\s+/g,''),long.replace(/\s+/g,''),'long');
+let all=[];for(const l of 'abcdefghijklmnopqrstuvwxyz'){all.push(...((await(await fetch('https://www.themealdb.com/api/json/v1/1/search.php?f='+l)).json()).meals||[]).map(fromMeal))}
+console.log('MealDB',all.length,'no steps',all.filter(r=>!r.steps.length).length,'with timer',all.filter(r=>r.steps.some(s=>findTimes(s).length)).length,'odd steps',all.flatMap(r=>r.steps).filter(s=>s.length<12).slice(0,15));
+console.log(rank(all,['eggs','tomato','cheddar cheese'],6).map(r=>r.title+' ['+r.used+']'));
+const u='https://en.wikibooks.org/w/api.php?'+new URLSearchParams({action:'query',generator:'search',gsrsearch:'("chicken breast" OR "tomato") incategory:Recipes',gsrnamespace:102,gsrlimit:30,prop:'revisions',rvprop:'content',rvslots:'main',format:'json',formatversion:2});
+const p=(await(await fetch(u,{headers:{'user-agent':'RecipeAppTest/1.0'}})).json()).query.pages,w=p.map(fromWiki);console.log('Wiki parsed',w.filter(Boolean).length,'/',p.length);console.log(JSON.stringify(w.filter(Boolean).slice(0,2)).slice(0,2500));console.log(bad,'failures');
